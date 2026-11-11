@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="mrbd-web-app-capable" content="yes">
-  <meta name="description" content="Jarvis for Meta Ray-Ban Display. Use quick notes, a timer, and camera prompts for Meta AI.">
+  <meta name="description" content="Jarvis for Meta Ray-Ban Display. Log workouts, start timers, take notes, and use Meta AI voice commands.">
   <meta name="theme-color" content="#000000">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23091017'/%3E%3Cpath d='M22 33h7l5-13 7 24 4-11h8' fill='none' stroke='%2375eddb' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
   <title>Jarvis</title>
@@ -135,11 +135,51 @@
       line-height: 1;
     }
     .timer-display.done { color: var(--accent); }
-    .presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .presets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .presets button { padding-inline: 5px; font-size: 16px; }
     .presets button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
     .timer-actions { margin-top: 10px; }
     .primary { background: #254c4b; border-color: #6fd4c2; }
+    .gym-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 14px;
+      overflow-wrap: anywhere;
+    }
+    .gym-card h3 { margin: 0 0 5px; font-size: 25px; line-height: 1.15; }
+    .gym-metrics, .gym-controls, .gym-fields, .gym-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .gym-metrics { margin-top: 12px; }
+    .gym-metrics dt, .gym-fields label { color: var(--muted); font-size: 15px; }
+    .gym-metrics dd { margin: 2px 0 0; font-size: 22px; font-weight: 650; }
+    .gym-controls button, .gym-actions button { padding-inline: 6px; }
+    .gym-next { margin-top: 8px; }
+    .gym-rest {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 48px;
+      gap: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .gym-rest output { color: var(--accent); font-size: 22px; font-weight: 650; }
+    .gym-rest button { min-height: 42px; font-size: 15px; }
+    .gym-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .gym-fields label input, .exercise-name input { margin-top: 4px; }
+    .exercise-name { display: block; color: var(--muted); font-size: 15px; }
+    .gym-plan-list { list-style: none; padding: 0; margin: 14px 0 0; }
+    .gym-plan-list .muted { font-size: 15px; }
+    #gym-log[aria-disabled="true"] { color: var(--muted); }
+    #gym-log, #gym-start { width: 100%; }
     .desktop-hint { margin-top: 17px; color: var(--muted); font-size: 14px; }
+    @media (max-width: 420px) {
+      .gym-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .gym-actions button { font-size: 16px; }
+    }
     @media (max-height: 650px) {
       .desktop-hint { display: none; }
     }
@@ -170,6 +210,14 @@
           <button type="button" class="tile" data-open="timer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="14" r="7.5"/><path d="M9 2h6m-3 4.5V2m0 8v4l2.6 1.5"/></svg>
             <span><b>Timer</b><small id="timer-summary">Start a countdown</small></span><span class="chevron" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="tile" data-open="gym">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 10v4m4-8v12m12-12v12m4-8v4M6 12h12M3 8h3m12 0h3M3 16h3m12 0h3"/></svg>
+            <span><b>Gym Mode</b><small>Log sets and time your rests</small></span><span class="chevron" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="tile" data-open="voice">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1m-7 8v3m-3 0h6"/></svg>
+            <span><b>Voice Commands</b><small>Use Meta AI with Jarvis</small></span><span class="chevron" aria-hidden="true">›</span>
           </button>
         </nav>
         <p class="desktop-hint">Desktop preview: use the arrow keys and Enter.</p>
@@ -210,6 +258,7 @@
         <p id="timer-display" class="timer-display" aria-label="Time remaining">01:00</p>
         <div class="presets" aria-label="Timer presets">
           <button type="button" data-seconds="60" aria-pressed="true">1 min</button>
+          <button type="button" data-seconds="90" aria-pressed="false">90 sec</button>
           <button type="button" data-seconds="120" aria-pressed="false">2 min</button>
           <button type="button" data-seconds="300" aria-pressed="false">5 min</button>
         </div>
@@ -218,6 +267,79 @@
           <button type="button" id="timer-reset">Reset</button>
         </div>
         <p id="timer-status" class="notice" role="status" hidden></p>
+        <button type="button" class="home-link" data-open="home">Home</button>
+      </section>
+
+      <section id="gym" aria-labelledby="gym-heading" hidden>
+        <div class="page-heading"><h2 id="gym-heading">Gym Mode</h2></div>
+        <div class="list">
+          <p id="gym-empty" class="muted">Add your exercises to start a workout.</p>
+          <div id="gym-current" class="gym-card" hidden>
+            <h3 id="gym-name"></h3>
+            <p id="gym-progress" class="muted"></p>
+            <dl class="gym-metrics">
+              <div><dt>Today’s weight</dt><dd id="gym-weight"></dd></div>
+              <div><dt>Last logged weight</dt><dd id="gym-last-weight"></dd></div>
+            </dl>
+            <p id="gym-next" class="muted gym-next"></p>
+          </div>
+          <p id="gym-finished" class="gym-card" hidden>Workout complete.</p>
+          <div id="gym-rest" class="gym-rest gym-card" hidden>
+            <output id="gym-rest-time" aria-label="Rest countdown"></output>
+            <button type="button" id="gym-skip-rest">End rest</button>
+          </div>
+          <button type="button" id="gym-log" class="primary" data-entry-focus hidden>Log set</button>
+          <button type="button" id="gym-start" class="primary" data-entry-focus hidden>New workout</button>
+          <div id="gym-weights" class="gym-controls" hidden>
+            <button type="button" id="gym-lighter">−5 lb</button>
+            <button type="button" id="gym-heavier">+5 lb</button>
+          </div>
+          <div class="gym-actions">
+            <button type="button" id="gym-manage" data-open="gym-plan">Edit workout</button>
+            <button type="button" id="gym-undo" hidden>Undo last set</button>
+          </div>
+        </div>
+        <p id="gym-status" class="notice" role="status" hidden></p>
+        <button type="button" class="home-link" data-open="home">Home</button>
+      </section>
+
+      <section id="gym-plan" aria-labelledby="gym-plan-heading" hidden>
+        <div class="page-heading"><h2 id="gym-plan-heading">Workout plan</h2></div>
+        <form id="gym-exercise-form" class="list">
+          <label class="exercise-name">Exercise
+            <input name="exercise" type="text" required maxlength="64" autocomplete="off" placeholder="e.g. Chest press">
+          </label>
+          <div class="gym-fields">
+            <label>Sets<input name="sets" type="text" required inputmode="numeric" maxlength="2" value="3"></label>
+            <label>Target reps<input name="reps" type="text" required inputmode="numeric" maxlength="3" value="8"></label>
+            <label>Weight (lb)<input name="weight" type="text" required inputmode="decimal" maxlength="8" value="0"></label>
+            <label>Rest (sec)<input name="rest" type="text" required inputmode="numeric" maxlength="4" value="90"></label>
+          </div>
+          <div class="gym-actions">
+            <button type="submit" id="gym-save" class="primary">Add exercise</button>
+            <button type="button" id="gym-cancel" hidden>Cancel edit</button>
+            <button type="button" id="gym-remove" hidden>Remove exercise</button>
+            <button type="button" id="gym-confirm-remove" hidden>Confirm remove</button>
+          </div>
+        </form>
+        <p id="gym-plan-status" class="notice" role="status" hidden></p>
+        <ul id="gym-plan-list" class="gym-plan-list list" aria-label="Exercises"></ul>
+        <button type="button" class="home-link" data-open="gym">Back to Gym Mode</button>
+      </section>
+
+      <section id="voice" aria-labelledby="voice-heading" hidden>
+        <div class="page-heading">
+          <h2 id="voice-heading">Voice Commands</h2>
+          <p id="voice-status" class="muted" role="status">Checking Meta AI voice support…</p>
+        </div>
+        <dl class="list">
+          <div class="prompt"><dt>Start a timer</dt><dd>“Hey Meta, start a 90-second timer in Jarvis.”</dd></div>
+          <div class="prompt"><dt>See your next exercise</dt><dd>“Hey Meta, show my next exercise in Jarvis.”</dd></div>
+        </dl>
+        <div class="gym-actions" style="margin-top: 12px;">
+          <button type="button" data-open="timer">Open Timer</button>
+          <button type="button" data-open="gym">Open Gym Mode</button>
+        </div>
         <button type="button" class="home-link" data-open="home">Home</button>
       </section>
     </div>
@@ -243,20 +365,46 @@
     const durations = presetButtons.map(button => Number(button.dataset.seconds) * 1000);
     const notesKey = "jarvis.notes.v1";
     const timerKey = "jarvis.timer.v1";
+    const gymKey = "jarvis.gym.v1";
+    const maxTimerSeconds = 3600;
+    const maxWeight = 10000;
     const defaultTimer = { duration: durations[0], remaining: durations[0], endsAt: null };
+    const gymForm = document.querySelector("#gym-exercise-form");
+    const gymFields = gymForm.elements;
+    const gymPlanList = document.querySelector("#gym-plan-list");
+    const gymPlanStatus = document.querySelector("#gym-plan-status");
+    const gymStatus = document.querySelector("#gym-status");
+    const gymRest = document.querySelector("#gym-rest");
+    const gymRestTime = document.querySelector("#gym-rest-time");
+    const gymSkipRest = document.querySelector("#gym-skip-rest");
+    const gymLog = document.querySelector("#gym-log");
+    const gymStart = document.querySelector("#gym-start");
+    const gymManage = document.querySelector("#gym-manage");
+    const gymUndo = document.querySelector("#gym-undo");
+    const gymCancel = document.querySelector("#gym-cancel");
+    const gymRemove = document.querySelector("#gym-remove");
+    const gymConfirmRemove = document.querySelector("#gym-confirm-remove");
+    const voiceStatus = document.querySelector("#voice-status");
 
     let current = document.querySelector("#home");
     let homeFocus = current.querySelector("button");
     let confirmation = null;
     let notes = readStored(notesKey, []);
     let timer = readStored(timerKey, defaultTimer);
+    let gym = readStored(gymKey, null);
+    let editingExercise = null;
 
     if (!Array.isArray(notes)) notes = [];
     notes = notes.filter(note => typeof note?.id === "string" && typeof note.text === "string");
-    if (!durations.includes(timer?.duration) || !Number.isFinite(timer.remaining) ||
+    if (!validWholeNumber(timer?.duration / 1000, 1, maxTimerSeconds) || !Number.isFinite(timer.remaining) ||
         timer.remaining < 0 || timer.remaining > timer.duration ||
         (timer.endsAt !== null && !Number.isFinite(timer.endsAt))) {
       timer = { ...defaultTimer };
+    }
+    if (!Array.isArray(gym?.exercises)) gym = { exercises: [], restEndsAt: null, undo: null };
+
+    function validWholeNumber(value, min, max) {
+      return Number.isInteger(value) && value >= min && value <= max;
     }
 
     function showNotice(element, message) {
@@ -289,9 +437,16 @@
       element.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
 
+    function visibleControl(element) {
+      return !element.disabled && !element.closest("[hidden]");
+    }
+
     function openView(id) {
       const view = views.find(section => section.id === id);
       if (!view || view === current) return;
+      if (current.id === "home") {
+        homeFocus = [...current.querySelectorAll("[data-open]")].find(button => button.dataset.open === id) ?? homeFocus;
+      }
       if (current.id === "notes" && confirmation !== null) {
         confirmation = null;
         renderNotes();
@@ -300,7 +455,9 @@
       view.hidden = false;
       current = view;
       window.scrollTo(0, 0);
-      focusControl(id === "home" ? homeFocus : view.querySelector("input, button"));
+      const controls = [...view.querySelectorAll("input, button")].filter(visibleControl);
+      const first = controls.find(control => control.hasAttribute("data-entry-focus")) ?? controls[0];
+      focusControl(id === "home" ? homeFocus : first);
     }
 
     function renderNotes() {
@@ -396,6 +553,275 @@
       syncPresets();
     }
 
+    function nextExercise() {
+      return gym.exercises.find(exercise => exercise.completed < exercise.sets);
+    }
+
+    function weightLabel(weight) {
+      return weight === null ? "—" : weight + " lb";
+    }
+
+    function saveGym() {
+      storeValue(gymKey, gym);
+    }
+
+    function updateGymRest() {
+      const remaining = Math.max(0, (gym.restEndsAt ?? 0) - Date.now());
+      const resting = remaining > 0;
+      if (!resting && gym.restEndsAt !== null) {
+        gym.restEndsAt = null;
+        saveGym();
+      }
+      const display = resting ? "Rest " + formatTime(remaining) : "";
+      if (gymRestTime.textContent !== display) gymRestTime.textContent = display;
+      const wasOnRestButton = document.activeElement === gymSkipRest;
+      if (gymRest.hidden === resting) gymRest.hidden = !resting;
+      if (gymLog.getAttribute("aria-disabled") !== String(resting)) {
+        gymLog.setAttribute("aria-disabled", String(resting));
+      }
+      const label = resting ? "Resting…" : "Log set";
+      if (gymLog.textContent !== label) gymLog.textContent = label;
+      if (!resting && current.id === "gym" && wasOnRestButton) {
+        focusControl(gymLog.hidden ? gymStart : gymLog);
+      }
+    }
+
+    function renderGym() {
+      const exercise = nextExercise();
+      const hasPlan = gym.exercises.length > 0;
+      const complete = hasPlan && !exercise;
+      document.querySelector("#gym-empty").hidden = hasPlan;
+      document.querySelector("#gym-current").hidden = !exercise;
+      document.querySelector("#gym-finished").hidden = !complete;
+      document.querySelector("#gym-weights").hidden = !exercise;
+      gymLog.hidden = !exercise;
+      gymStart.hidden = !complete;
+      gymUndo.hidden = !gym.undo;
+      gymManage.textContent = hasPlan ? "Edit workout" : "Add exercises";
+      if (exercise) {
+        const next = gym.exercises.slice(gym.exercises.indexOf(exercise) + 1)
+          .find(item => item.completed < item.sets);
+        document.querySelector("#gym-name").textContent = exercise.name;
+        document.querySelector("#gym-progress").textContent =
+          "Set " + (exercise.completed + 1) + " of " + exercise.sets + " · " + exercise.reps + " target reps";
+        document.querySelector("#gym-weight").textContent = weightLabel(exercise.weight);
+        document.querySelector("#gym-last-weight").textContent = weightLabel(exercise.lastWeight);
+        document.querySelector("#gym-next").textContent = next ? "Next exercise · " + next.name : "Last exercise";
+      }
+      updateGymRest();
+    }
+
+    function renderGymPlan() {
+      gymPlanList.replaceChildren();
+      for (const exercise of gym.exercises) {
+        const row = document.createElement("li");
+        row.className = "note";
+        const label = document.createElement("div");
+        const name = document.createElement("p");
+        name.textContent = exercise.name;
+        const details = document.createElement("span");
+        details.className = "muted";
+        details.textContent = exercise.sets + " sets · " + exercise.reps + " reps · " +
+          exercise.rest + " sec rest";
+        label.append(name, details);
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.textContent = "Edit";
+        edit.setAttribute("aria-label", "Edit " + exercise.name);
+        edit.addEventListener("click", () => {
+          selectExercise(exercise);
+          focusControl(gymFields.exercise);
+        });
+        row.append(label, edit);
+        gymPlanList.append(row);
+      }
+    }
+
+    function selectExercise(exercise) {
+      editingExercise = exercise;
+      gymFields.exercise.value = exercise?.name ?? "";
+      gymFields.sets.value = exercise?.sets ?? 3;
+      gymFields.reps.value = exercise?.reps ?? 8;
+      gymFields.weight.value = exercise?.weight ?? 0;
+      gymFields.rest.value = exercise?.rest ?? 90;
+      document.querySelector("#gym-save").textContent = exercise ? "Save exercise" : "Add exercise";
+      gymCancel.hidden = !exercise;
+      gymRemove.hidden = !exercise;
+      gymConfirmRemove.hidden = true;
+      showNotice(gymPlanStatus, "");
+    }
+
+    gymForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const name = gymFields.exercise.value.trim();
+      const sets = Number(gymFields.sets.value);
+      const reps = Number(gymFields.reps.value);
+      const rest = Number(gymFields.rest.value);
+      const weightText = gymFields.weight.value.trim();
+      const weight = Number(weightText);
+      if (!name || !validWholeNumber(sets, 1, 99) || !validWholeNumber(reps, 1, 999) ||
+          !validWholeNumber(rest, 1, maxTimerSeconds) || !/^\d+(?:\.\d{1,2})?$/.test(weightText) ||
+          weight > maxWeight) {
+        showNotice(gymPlanStatus, "Enter a name, 1–99 sets, 1–999 reps, 0–10,000 lb, and 1–3,600 seconds of rest.");
+        return;
+      }
+      const saved = Boolean(editingExercise);
+      const changes = { name, sets, reps, weight, rest };
+      if (editingExercise) {
+        Object.assign(editingExercise, changes);
+      } else {
+        const id = globalThis.crypto?.randomUUID?.() ?? Date.now() + "-" + Math.random();
+        gym.exercises.push({ id, ...changes, lastWeight: null, completed: 0 });
+      }
+      saveGym();
+      renderGym();
+      renderGymPlan();
+      selectExercise(null);
+      showNotice(gymPlanStatus, saved ? "Exercise saved." : "Exercise added.");
+      focusControl(gymFields.exercise);
+    });
+
+    gymCancel.addEventListener("click", () => {
+      selectExercise(null);
+      focusControl(gymFields.exercise);
+    });
+
+    gymRemove.addEventListener("click", () => {
+      gymConfirmRemove.hidden = false;
+      showNotice(gymPlanStatus, "Remove " + editingExercise.name + " from this workout?");
+      focusControl(gymConfirmRemove);
+    });
+
+    gymConfirmRemove.addEventListener("click", () => {
+      const id = editingExercise.id;
+      gym.exercises = gym.exercises.filter(exercise => exercise.id !== id);
+      if (gym.undo?.id === id) gym.undo = null;
+      if (gym.exercises.length === 0) gym.restEndsAt = null;
+      saveGym();
+      renderGym();
+      renderGymPlan();
+      selectExercise(null);
+      showNotice(gymPlanStatus, "Exercise removed.");
+      focusControl(gymFields.exercise);
+    });
+
+    gymLog.addEventListener("click", () => {
+      const exercise = nextExercise();
+      if (!exercise || (gym.restEndsAt ?? 0) > Date.now()) return;
+      gym.undo = { id: exercise.id, completed: exercise.completed, lastWeight: exercise.lastWeight };
+      exercise.completed += 1;
+      exercise.lastWeight = exercise.weight;
+      gym.restEndsAt = Date.now() + exercise.rest * 1000;
+      saveGym();
+      renderGym();
+      showNotice(gymStatus, "Set logged · " + exercise.name + " · " + weightLabel(exercise.lastWeight));
+      if (gymLog.hidden) focusControl(gymSkipRest);
+    });
+
+    gymUndo.addEventListener("click", () => {
+      const exercise = gym.exercises.find(item => item.id === gym.undo?.id);
+      if (!exercise) return;
+      exercise.completed = gym.undo.completed;
+      exercise.lastWeight = gym.undo.lastWeight;
+      gym.undo = null;
+      gym.restEndsAt = null;
+      saveGym();
+      renderGym();
+      showNotice(gymStatus, "Last set undone.");
+      focusControl(gymLog);
+    });
+
+    gymSkipRest.addEventListener("click", () => {
+      gym.restEndsAt = null;
+      saveGym();
+      updateGymRest();
+    });
+
+    gymStart.addEventListener("click", () => {
+      for (const exercise of gym.exercises) exercise.completed = 0;
+      gym.restEndsAt = null;
+      gym.undo = null;
+      saveGym();
+      renderGym();
+      showNotice(gymStatus, "New workout started.");
+      focusControl(gymLog);
+    });
+
+    for (const [id, step] of [["gym-lighter", -5], ["gym-heavier", 5]]) {
+      document.getElementById(id).addEventListener("click", () => {
+        const exercise = nextExercise();
+        if (!exercise) return;
+        exercise.weight = Math.min(maxWeight, Math.max(0, Math.round((exercise.weight + step) * 100) / 100));
+        saveGym();
+        renderGym();
+      });
+    }
+
+    function voiceResult(message, isError = false) {
+      return { content: [{ type: "text", text: message }], isError };
+    }
+
+    async function registerVoiceCommands() {
+      const context = document.modelContext;
+      if (typeof context?.registerTool !== "function") {
+        voiceStatus.textContent = "Meta AI voice commands are unavailable in this browser. Use the buttons below.";
+        return;
+      }
+      const tools = [
+        {
+          name: "jarvis_start_timer",
+          description: "Start a countdown in the Jarvis app when the wearer asks for a timer. Supply the entire duration in seconds. Opens the countdown on screen.",
+          inputSchema: {
+            type: "object",
+            properties: { seconds: { type: "integer", description: "Total seconds, from 1 to 3600. For example, 90 for one and a half minutes." } },
+            required: ["seconds"],
+            additionalProperties: false
+          },
+          execute(input) {
+            const seconds = input?.seconds;
+            if (!validWholeNumber(seconds, 1, maxTimerSeconds)) {
+              return voiceResult("Choose a whole number of seconds from 1 to 3,600.", true);
+            }
+            const duration = seconds * 1000;
+            if ((timer.endsAt ?? 0) > Date.now()) {
+              openView("timer");
+              return timer.duration === duration ? voiceResult("That timer is already running in Jarvis.") :
+                voiceResult("A Jarvis timer is already running. Reset it before starting another one.", true);
+            }
+            setTimer({ duration, remaining: duration, endsAt: Date.now() + duration });
+            openView("timer");
+            return voiceResult("Started a " + seconds + "-second timer in Jarvis.");
+          }
+        },
+        {
+          name: "jarvis_next_exercise",
+          description: "Show the next unlogged exercise and set in the wearer's Jarvis workout plan. Opens Gym Mode and reports the last logged weight when available.",
+          inputSchema: { type: "object", properties: {}, additionalProperties: false },
+          annotations: { readOnlyHint: true },
+          execute() {
+            const exercise = nextExercise();
+            openView("gym");
+            if (!exercise) {
+              return voiceResult(gym.exercises.length ? "Your workout is complete." : "Add an exercise to your Jarvis workout first.");
+            }
+            const previous = exercise.lastWeight === null ? "No weight logged yet." :
+              "Last logged weight was " + exercise.lastWeight + " pounds.";
+            return voiceResult("Next: " + exercise.name + ", set " + (exercise.completed + 1) +
+              " of " + exercise.sets + ", target " + exercise.reps + " reps. " + previous);
+          }
+        }
+      ];
+      const registrations = await Promise.allSettled(tools.map(async tool => context.registerTool(tool)));
+      const registered = registrations.filter(result => result.status === "fulfilled").length;
+      if (registered === tools.length) {
+        voiceStatus.textContent = "Voice preview. Try these while Jarvis is open.";
+      } else if (registered) {
+        voiceStatus.textContent = "One voice command is available to try. Both work using the buttons below.";
+      } else {
+        voiceStatus.textContent = "Meta AI voice commands could not start. Use the buttons below.";
+      }
+    }
+
     noteForm.addEventListener("submit", event => {
       event.preventDefault();
       const note = noteInput.value.trim();
@@ -416,7 +842,6 @@
 
     for (const button of main.querySelectorAll("[data-open]")) {
       button.addEventListener("click", () => {
-        if (current.id === "home") homeFocus = button;
         openView(button.dataset.open);
       });
     }
@@ -444,21 +869,22 @@
 
     document.addEventListener("keydown", event => {
       const source = document.activeElement;
+      if (event.isComposing) return;
       if (event.key === "Escape" && current.id !== "home") {
         event.preventDefault();
-        openView("home");
+        openView(current.id === "gym-plan" ? "gym" : "home");
         return;
       }
       const direction = arrows[event.key];
-      if (!direction || event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+      if (!direction || event.altKey || event.ctrlKey || event.metaKey) return;
       const [horizontal, vertical] = direction;
-      if (source === noteInput && horizontal) {
-        const atEnd = noteInput.selectionStart === noteInput.value.length;
-        const atStart = noteInput.selectionEnd === 0;
+      if (source instanceof HTMLInputElement && source.type === "text" && horizontal) {
+        const atEnd = source.selectionStart === source.value.length;
+        const atStart = source.selectionEnd === 0;
         if ((horizontal === 1 && !atEnd) || (horizontal === -1 && !atStart)) return;
       }
       event.preventDefault();
-      const controls = [...current.querySelectorAll("button:not(:disabled), input")];
+      const controls = [...current.querySelectorAll("button, input")].filter(visibleControl);
       if (!controls.includes(source)) {
         focusControl(controls[0]);
         return;
@@ -484,11 +910,18 @@
     });
 
     renderNotes();
+    renderGym();
+    renderGymPlan();
     updateTimer();
     syncPresets();
-    window.setInterval(updateTimer, 250);
-    document.addEventListener("visibilitychange", updateTimer);
+    function updateCountdowns() {
+      updateTimer();
+      updateGymRest();
+    }
+    window.setInterval(updateCountdowns, 250);
+    document.addEventListener("visibilitychange", updateCountdowns);
     focusControl(homeFocus);
+    registerVoiceCommands();
   </script>
 </body>
 </html>
