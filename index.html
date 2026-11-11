@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="mrbd-web-app-capable" content="yes">
+  <meta name="description" content="Jarvis for Meta Ray-Ban Display. Use quick notes, a timer, and camera prompts for Meta AI.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23091017'/%3E%3Cpath d='M22 33h7l5-13 7 24 4-11h8' fill='none' stroke='%2375eddb' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <title>Jarvis</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f1fbff;
+      --muted: #b6cad3;
+      --accent: #83f2df;
+      --border: #3b636c;
+      --panel: #101a21;
+      --focus: #19353b;
+      font-family: Inter, "Segoe UI", system-ui, sans-serif;
+      background: #000;
+      color: var(--ink);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+    [hidden] { display: none !important; }
+    main {
+      width: min(100%, 600px);
+      margin-inline: auto;
+      padding: 20px clamp(14px, 5vw, 30px) 24px;
+      min-width: 0;
+    }
+    header { margin-bottom: 21px; }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--accent);
+      background: var(--panel);
+    }
+    .mark svg { width: 24px; height: 24px; }
+    h1, h2, p { margin: 0; }
+    h1 { font-size: 27px; font-weight: 650; letter-spacing: -.04em; }
+    h2 { font-size: 30px; line-height: 1.1; letter-spacing: -.035em; }
+    .muted { color: var(--muted); font-size: 17px; line-height: 1.4; }
+    .views { min-width: 0; }
+    .page-heading { margin-bottom: 14px; }
+    .page-heading .muted { margin-top: 7px; }
+    .list { display: grid; gap: 10px; }
+    button, input {
+      font: inherit;
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      min-width: 0;
+    }
+    button {
+      cursor: pointer;
+      min-height: 49px;
+      padding: 8px 14px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    button:focus, input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      background: var(--focus);
+    }
+    button:hover { background: var(--focus); }
+    button:disabled { opacity: .5; cursor: default; }
+    .tile {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr) 13px;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 15px;
+      text-align: left;
+      min-height: 79px;
+    }
+    .tile svg { width: 27px; height: 27px; color: var(--accent); }
+    .tile b { display: block; font-size: 22px; line-height: 1.1; }
+    .tile small { display: block; color: var(--muted); font-size: 16px; margin-top: 5px; }
+    .chevron { color: var(--accent); font-size: 24px; }
+    .home-link { margin-top: 15px; background: #060b0f; }
+    .prompt, .note {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 12px 14px;
+    }
+    .prompt dt { color: var(--accent); font-size: 15px; font-weight: 650; margin-bottom: 4px; }
+    .prompt dd { font-size: 19px; line-height: 1.3; margin: 0; }
+    dl { margin: 0; }
+    .input-row, .timer-actions, .presets {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    input {
+      width: 100%;
+      padding: 9px 12px;
+      min-height: 49px;
+      font-size: 18px;
+    }
+    input::placeholder { color: var(--muted); }
+    .notes-list { margin: 12px 0 0; padding: 0; list-style: none; }
+    .note {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px 12px;
+      align-items: center;
+    }
+    .note p { overflow-wrap: anywhere; white-space: pre-wrap; font-size: 18px; }
+    .note button { min-height: 42px; font-size: 15px; padding-inline: 10px; }
+    .note .confirm { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .note .confirm span { margin-right: auto; }
+    .notice { margin-top: 10px; color: var(--accent); font-size: 16px; }
+    .timer-display {
+      display: grid;
+      place-items: center;
+      min-height: 115px;
+      margin-bottom: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: clamp(54px, 13vw, 84px);
+      letter-spacing: -.04em;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .timer-display.done { color: var(--accent); }
+    .presets { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .presets button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+    .timer-actions { margin-top: 10px; }
+    .primary { background: #254c4b; border-color: #6fd4c2; }
+    .desktop-hint { margin-top: 17px; color: var(--muted); font-size: 14px; }
+    @media (max-height: 650px) {
+      .desktop-hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 13h5l3-7 4 12 3-5h5"/>
+        </svg>
+      </span>
+      <h1>Jarvis</h1>
+    </header>
+
+    <div class="views">
+      <section id="home" aria-label="Jarvis tools">
+        <nav class="list" aria-label="Tools">
+          <button type="button" class="tile" data-open="camera">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4m8 0h4v4m0 8v4h-4m-8 0H4v-4M8 10h8m-8 4h5"/></svg>
+            <span><b>Read &amp; translate</b><small>Camera prompts for Meta AI</small></span><span class="chevron" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="tile" data-open="notes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8m-8 4h6"/></svg>
+            <span><b>Quick notes</b><small>Dictate or type a note</small></span><span class="chevron" aria-hidden="true">›</span>
+          </button>
+          <button type="button" class="tile" data-open="timer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="14" r="7.5"/><path d="M9 2h6m-3 4.5V2m0 8v4l2.6 1.5"/></svg>
+            <span><b>Timer</b><small id="timer-summary">Start a countdown</small></span><span class="chevron" aria-hidden="true">›</span>
+          </button>
+        </nav>
+        <p class="desktop-hint">Desktop preview: use the arrow keys and Enter.</p>
+      </section>
+
+      <section id="camera" aria-labelledby="camera-heading" hidden>
+        <div class="page-heading">
+          <h2 id="camera-heading">Read &amp; translate</h2>
+          <p class="muted">Look at the target and say one of these to Meta AI.</p>
+        </div>
+        <dl class="list">
+          <div class="prompt"><dt>Read a sign</dt><dd>“Hey Meta, what does this sign say?”</dd></div>
+          <div class="prompt"><dt>Translate text</dt><dd>“Hey Meta, translate this text into English.”</dd></div>
+          <div class="prompt"><dt>Identify an object</dt><dd>“Hey Meta, what am I looking at?”</dd></div>
+        </dl>
+        <button type="button" class="home-link" data-open="home">Home</button>
+      </section>
+
+      <section id="notes" aria-labelledby="notes-heading" hidden>
+        <div class="page-heading">
+          <h2 id="notes-heading">Quick notes</h2>
+          <p class="muted">Select the field to open dictation or typing.</p>
+        </div>
+        <form id="note-form" class="input-row">
+          <input id="note-input" type="text" aria-label="New note" placeholder="New note" maxlength="180" autocomplete="off">
+          <button type="submit" class="primary">Save</button>
+        </form>
+        <p id="notes-status" class="notice" role="status" hidden></p>
+        <p id="notes-empty" class="muted" style="margin-top: 12px;">No notes yet.</p>
+        <ul id="notes-list" class="notes-list list" aria-label="Saved notes"></ul>
+        <button type="button" class="home-link" data-open="home">Home</button>
+      </section>
+
+      <section id="timer" aria-labelledby="timer-heading" hidden>
+        <div class="page-heading">
+          <h2 id="timer-heading">Timer</h2>
+        </div>
+        <p id="timer-display" class="timer-display" aria-label="Time remaining">01:00</p>
+        <div class="presets" aria-label="Timer presets">
+          <button type="button" data-seconds="60" aria-pressed="true">1 min</button>
+          <button type="button" data-seconds="120" aria-pressed="false">2 min</button>
+          <button type="button" data-seconds="300" aria-pressed="false">5 min</button>
+        </div>
+        <div class="timer-actions">
+          <button type="button" id="timer-toggle" class="primary">Start</button>
+          <button type="button" id="timer-reset">Reset</button>
+        </div>
+        <p id="timer-status" class="notice" role="status" hidden></p>
+        <button type="button" class="home-link" data-open="home">Home</button>
+      </section>
+    </div>
+    <p id="storage-status" class="notice" role="status" hidden></p>
+  </main>
+
+  <script>
+    "use strict";
+
+    const main = document.querySelector("main");
+    const views = [...main.querySelectorAll("section")];
+    const noteForm = document.querySelector("#note-form");
+    const noteInput = document.querySelector("#note-input");
+    const notesList = document.querySelector("#notes-list");
+    const notesEmpty = document.querySelector("#notes-empty");
+    const notesStatus = document.querySelector("#notes-status");
+    const storageStatus = document.querySelector("#storage-status");
+    const timerDisplay = document.querySelector("#timer-display");
+    const timerSummary = document.querySelector("#timer-summary");
+    const timerToggle = document.querySelector("#timer-toggle");
+    const timerStatus = document.querySelector("#timer-status");
+    const presetButtons = [...main.querySelectorAll("[data-seconds]")];
+    const durations = presetButtons.map(button => Number(button.dataset.seconds) * 1000);
+    const notesKey = "jarvis.notes.v1";
+    const timerKey = "jarvis.timer.v1";
+    const defaultTimer = { duration: durations[0], remaining: durations[0], endsAt: null };
+
+    let current = document.querySelector("#home");
+    let homeFocus = current.querySelector("button");
+    let confirmation = null;
+    let notes = readStored(notesKey, []);
+    let timer = readStored(timerKey, defaultTimer);
+
+    if (!Array.isArray(notes)) notes = [];
+    notes = notes.filter(note => typeof note?.id === "string" && typeof note.text === "string");
+    if (!durations.includes(timer?.duration) || !Number.isFinite(timer.remaining) ||
+        timer.remaining < 0 || timer.remaining > timer.duration ||
+        (timer.endsAt !== null && !Number.isFinite(timer.endsAt))) {
+      timer = { ...defaultTimer };
+    }
+
+    function showNotice(element, message) {
+      if (element.textContent !== message) element.textContent = message;
+      element.hidden = !message;
+    }
+
+    function readStored(key, fallback) {
+      try {
+        const value = localStorage.getItem(key);
+        return value === null ? fallback : JSON.parse(value);
+      } catch {
+        return fallback;
+      }
+    }
+
+    function storeValue(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+      } catch {
+        showNotice(storageStatus, "Storage is unavailable. Changes last until this app closes.");
+        return false;
+      }
+    }
+
+    function focusControl(element) {
+      if (!element) return;
+      element.focus({ preventScroll: true });
+      element.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+
+    function openView(id) {
+      const view = views.find(section => section.id === id);
+      if (!view || view === current) return;
+      if (current.id === "notes" && confirmation !== null) {
+        confirmation = null;
+        renderNotes();
+      }
+      current.hidden = true;
+      view.hidden = false;
+      current = view;
+      window.scrollTo(0, 0);
+      focusControl(id === "home" ? homeFocus : view.querySelector("input, button"));
+    }
+
+    function renderNotes() {
+      notesEmpty.hidden = notes.length > 0;
+      notesList.replaceChildren();
+      for (const note of notes) {
+        const row = document.createElement("li");
+        row.className = "note";
+        const label = document.createElement("p");
+        label.textContent = note.text;
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "Delete";
+        remove.setAttribute("aria-label", "Delete note: " + note.text);
+        remove.addEventListener("click", () => {
+          confirmation = note.id;
+          renderNotes();
+          focusControl(notesList.querySelector("[data-cancel-delete]"));
+        });
+        row.append(label, remove);
+        if (confirmation === note.id) {
+          const actions = document.createElement("div");
+          actions.className = "confirm";
+          const prompt = document.createElement("span");
+          prompt.textContent = "Delete this note?";
+          const cancel = document.createElement("button");
+          cancel.type = "button";
+          cancel.dataset.cancelDelete = "";
+          cancel.textContent = "Keep";
+          cancel.addEventListener("click", () => {
+            confirmation = null;
+            const index = notes.indexOf(note);
+            renderNotes();
+            focusControl(notesList.children[index]?.querySelector("button") ?? noteInput);
+          });
+          const confirm = document.createElement("button");
+          confirm.type = "button";
+          confirm.textContent = "Confirm delete";
+          confirm.addEventListener("click", () => {
+            const index = notes.indexOf(note);
+            notes = notes.filter(entry => entry.id !== note.id);
+            confirmation = null;
+            const saved = storeValue(notesKey, notes);
+            renderNotes();
+            showNotice(notesStatus, saved ? "Note deleted." : "Note removed for this session.");
+            const next = notesList.children[Math.min(index, notesList.children.length - 1)];
+            focusControl(next?.querySelector("button") ?? noteInput);
+          });
+          actions.append(prompt, cancel, confirm);
+          row.append(actions);
+        }
+        notesList.append(row);
+      }
+    }
+
+    function formatTime(milliseconds) {
+      const seconds = Math.ceil(milliseconds / 1000);
+      const minutes = String(Math.floor(seconds / 60)).padStart(2, "0");
+      return minutes + ":" + String(seconds % 60).padStart(2, "0");
+    }
+
+    function updateTimer() {
+      const running = timer.endsAt !== null;
+      const remaining = running ? Math.max(0, timer.endsAt - Date.now()) : timer.remaining;
+      if (running && remaining === 0) {
+        timer = { ...timer, remaining: 0, endsAt: null };
+        storeValue(timerKey, timer);
+        syncPresets();
+      }
+      const active = timer.endsAt !== null;
+      const finished = remaining === 0;
+      const displayText = formatTime(remaining);
+      if (timerDisplay.textContent !== displayText) timerDisplay.textContent = displayText;
+      timerDisplay.classList.toggle("done", finished);
+      const summary = finished ? "Time is up" : active ? displayText + " remaining" : "Start a countdown";
+      const toggleLabel = active ? "Pause" : remaining === timer.duration || finished ? "Start" : "Resume";
+      if (timerSummary.textContent !== summary) timerSummary.textContent = summary;
+      if (timerToggle.textContent !== toggleLabel) timerToggle.textContent = toggleLabel;
+      showNotice(timerStatus, finished ? "Time is up." : "");
+    }
+
+    function syncPresets() {
+      for (const button of presetButtons) {
+        button.setAttribute("aria-pressed", String(Number(button.dataset.seconds) * 1000 === timer.duration));
+        button.disabled = timer.endsAt !== null;
+      }
+    }
+
+    function setTimer(next) {
+      timer = next;
+      storeValue(timerKey, timer);
+      updateTimer();
+      syncPresets();
+    }
+
+    noteForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const note = noteInput.value.trim();
+      if (!note) {
+        showNotice(notesStatus, "Enter a note first.");
+        focusControl(noteInput);
+        return;
+      }
+      const id = globalThis.crypto?.randomUUID?.() ?? Date.now() + "-" + Math.random();
+      notes.unshift({ id, text: note });
+      confirmation = null;
+      const saved = storeValue(notesKey, notes);
+      noteInput.value = "";
+      renderNotes();
+      showNotice(notesStatus, saved ? "Note saved." : "Note saved for this session.");
+      focusControl(noteInput);
+    });
+
+    for (const button of main.querySelectorAll("[data-open]")) {
+      button.addEventListener("click", () => {
+        if (current.id === "home") homeFocus = button;
+        openView(button.dataset.open);
+      });
+    }
+    for (const button of presetButtons) {
+      button.addEventListener("click", () => {
+        const duration = Number(button.dataset.seconds) * 1000;
+        setTimer({ duration, remaining: duration, endsAt: null });
+      });
+    }
+    timerToggle.addEventListener("click", () => {
+      if (timer.endsAt !== null) {
+        setTimer({ ...timer, remaining: Math.max(0, timer.endsAt - Date.now()), endsAt: null });
+      } else {
+        const remaining = timer.remaining || timer.duration;
+        setTimer({ ...timer, remaining, endsAt: Date.now() + remaining });
+      }
+    });
+    document.querySelector("#timer-reset").addEventListener("click", () => {
+      setTimer({ ...timer, remaining: timer.duration, endsAt: null });
+    });
+
+    const arrows = {
+      ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]
+    };
+
+    document.addEventListener("keydown", event => {
+      const source = document.activeElement;
+      if (event.key === "Escape" && current.id !== "home") {
+        event.preventDefault();
+        openView("home");
+        return;
+      }
+      const direction = arrows[event.key];
+      if (!direction || event.altKey || event.ctrlKey || event.metaKey || event.isComposing) return;
+      const [horizontal, vertical] = direction;
+      if (source === noteInput && horizontal) {
+        const atEnd = noteInput.selectionStart === noteInput.value.length;
+        const atStart = noteInput.selectionEnd === 0;
+        if ((horizontal === 1 && !atEnd) || (horizontal === -1 && !atStart)) return;
+      }
+      event.preventDefault();
+      const controls = [...current.querySelectorAll("button:not(:disabled), input")];
+      if (!controls.includes(source)) {
+        focusControl(controls[0]);
+        return;
+      }
+      const origin = source.getBoundingClientRect();
+      let closest;
+      let best = Infinity;
+      for (const target of controls) {
+        if (target === source) continue;
+        const rect = target.getBoundingClientRect();
+        const dx = (rect.left + rect.right - origin.left - origin.right) / 2;
+        const dy = (rect.top + rect.bottom - origin.top - origin.bottom) / 2;
+        const forward = horizontal * dx + vertical * dy;
+        if (forward <= 2) continue;
+        const cross = Math.abs(horizontal * dy - vertical * dx);
+        const score = forward + cross * 4;
+        if (score < best) {
+          closest = target;
+          best = score;
+        }
+      }
+      focusControl(closest);
+    });
+
+    renderNotes();
+    updateTimer();
+    syncPresets();
+    window.setInterval(updateTimer, 250);
+    document.addEventListener("visibilitychange", updateTimer);
+    focusControl(homeFocus);
+  </script>
+</body>
+</html>
